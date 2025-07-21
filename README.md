@@ -2,7 +2,166 @@
 
 This guide explains how to architect and manage a **production-ready AKS cluster**, covering **shared vs dedicated cluster models**, including **monitoring**, **security**, **disaster recovery**, and **namespace organization**.
 
-## ✅ **Recommended Order for Azure L7 + L3/L4 Protection**
+
+---
+
+## 🧱 Overview
+
+A production-grade Kubernetes cluster must be:
+
+- ✅ Monitored (Logging, Tracing, Alerts)
+- ✅ Secured (RBAC, DDoS, WAF, PIM)
+- ✅ Scalable (HPA, Cluster Autoscaler)
+- ✅ Highly Available (Multi-AZ / Multi-Region)
+- ✅ Disaster Recovery-ready (Chaos Engineering + Velero)
+- ✅ Secrets Protected (Azure Key Vault or Vault)
+
+---
+
+## Network model applied
+Based on the **README.md** file and the **consolidated architecture diagram** (`consolidated-aks-architecture.png`), here's a detailed explanation of the **Azure network model** implemented, especially within a **hub-and-spoke topology** supporting AKS clusters (shared and dedicated):
+
+---
+
+## 🔧 **Azure Network Model: Hub & Spoke with AKS and Centralized Governance**
+
+### 🗂️ Network Topology Summary
+
+| Component                  | Role                                                                       |
+| -------------------------- | -------------------------------------------------------------------------- |
+| **Hub VNet**               | Centralized network for shared services (Bastion, Azure Firewall, DNS, AD) |
+| **Spoke VNet (Shared)**    | Hosts shared AKS cluster, CI/CD agents, Azure resources                    |
+| **Spoke VNet (Dedicated)** | Hosts dedicated AKS cluster with isolated subnet and observability tools   |
+| **VNet Peering**           | Connects hub and spoke VNets for internal routing                          |
+| **Private Endpoints**      | Ensures private access to PaaS services like ACR, Key Vault, Monitor       |
+| **NSGs (Subnets)**         | Protect inbound/outbound traffic to subnets across hub/spoke model         |
+
+---
+
+## 🏗️ Diagram-Backed Network Design Breakdown
+
+### 1. **Hub VNet**
+
+* Contains **Azure Bastion** for secure VM/AKS access
+* JumpHost subnet for Bastion and admin access
+* Routes traffic to:
+
+  * Spoke VNets
+  * Azure Firewall (optional but recommended for East-West traffic inspection)
+  * Identity & DNS services
+
+**Notable Elements in Diagram:**
+
+* Bastion Subnet
+* Main VNet Network
+* Connected via VNet Peering to spokes
+
+---
+
+### 2. **Spoke VNet: Shared AKS Cluster**
+
+* Hosts:
+
+  * Shared AKS cluster with multiple namespaces
+  * CI/CD components (Azure DevOps agents)
+  * Azure Monitor
+  * Azure Open Service Mesh
+* Contains private DNS zones and private endpoints for:
+
+  * ACR
+  * Azure Monitor
+  * Key Vault
+* Uses **custom NSGs** to:
+
+  * Allow inbound App Gateway, Prometheus, Grafana, kubelet, OpenTelemetry traffic
+  * Allow outbound to Azure APIs, DNS, Observability tools
+
+---
+
+### 3. **Spoke VNet: Dedicated AKS Cluster**
+
+* Completely isolated from shared cluster
+* Same network design principles apply:
+
+  * NSGs per subnet
+  * Private DNS Zones for internal resolution
+  * Private Endpoints for ACR, Key Vault, Monitor
+  * Dedicated observability subnet (Grafana, Prometheus, etc.)
+* AKS subnet includes worker node pools and services like OSM sidecars, telemetry collectors
+
+---
+
+### 4. **VNet Peering**
+
+> Found in diagram as lines between hub and spoke VNets
+
+* **Non-transitive routing**: traffic can flow between hub <--> spoke, not spoke <--> spoke directly
+* Enables central governance (Bastion, Firewall, Monitor) from hub
+* Allows CI/CD agents or control plane tools to access AKS services privately
+
+---
+
+### 5. **Private Endpoints & DNS Zones**
+
+| Resource             | Access via Private Endpoint | DNS Zone (Optional)                 |
+| -------------------- | --------------------------- | ----------------------------------- |
+| Azure Container Reg. | ✅                           | `privatelink.azurecr.io`            |
+| Key Vault            | ✅                           | `privatelink.vaultcore.azure.net`   |
+| Azure Monitor        | ✅                           | `privatelink.monitor.azure.com`     |
+| Storage Account      | ✅                           | `privatelink.blob.core.windows.net` |
+| SQL/Backup           | ✅                           | `privatelink.database.windows.net`  |
+
+These are shown in the diagram as:
+
+* Private Link Services
+* DNS Zones
+* Connected via DNS Resolver or Private DNS Zone
+
+---
+
+## 📥 NSG Application per Subnet
+
+Each subnet (AKS, Bastion, CI/CD, Observability, Private Endpoints) includes its own **NSG with dedicated rules**, covering:
+
+| Subnet                      | Purpose                            | Key Rules                                                          |
+| --------------------------- | ---------------------------------- | ------------------------------------------------------------------ |
+| **AKS Node Subnet**         | Host AKS worker nodes              | Allow App Gateway, Load Balancer, metrics, OSM, telemetry, kubelet |
+| **Bastion Subnet**          | Jumpbox for admin access           | Allow SSH/RDP only from internal IPs                               |
+| **Observability Subnet**    | Grafana, Prometheus, OpenTelemetry | Ingress from AKS, outbound to Monitor APIs                         |
+| **Private Endpoint Subnet** | Access to ACR, Key Vault, etc.     | Allow AKS/CI/CD to initiate connections                            |
+| **CI/CD Subnet**            | DevOps agents                      | Allow outbound to AKS API and App Gateway                          |
+
+These NSGs are explicitly reflected in both README.md content and shown in the diagram with label lines and colored boxes.
+
+---
+
+## 🔄 Traffic Flow Summary
+
+```
+Client → Azure DDoS → Azure Front Door / WAF → App Gateway (shared/dedicated) →
+→ Azure Load Balancer → Ingress Controller in AKS →
+→ Application Services (Pods) with NSG protections
+```
+
+Metrics, telemetry, and trace data flow:
+
+```
+Pods / Node Exporters → Prometheus / Grafana / OpenTelemetry (Observability Subnet) →
+→ Azure Monitor / Log Analytics / Kiali
+```
+
+---
+
+## 🔐 Security & Governance Elements Visible in Diagram
+
+* **Landing Zones model**:
+
+  * Management Groups with policies (highlighted in yellow/red boundaries)
+  * Root MG > Platform MG > Networking/Identity MG > Dev/Test/Prod subscriptions
+* **Azure Policy enforcement** (segregated by MG and subscription)
+* **Private AKS and NSG hardening**
+* **PIM / RBAC** access controls visible through identity plane lines
+
 
 ### 📌 **Correct Order:**
 
@@ -50,11 +209,11 @@ K8s Services & Pods
 
 ---
 
-### ✅ Fix Checklist
+### ✅ Fix Checklist for security
 
 ## 🧱 Overview
 
-![AKS Cluster Architecture](consolidated architetcure.png)
+![AKS Cluster Architecture](consolidated-aks-architecture.png)
 
 A production-grade Kubernetes cluster must be:
 
@@ -66,22 +225,26 @@ A production-grade Kubernetes cluster must be:
 - ✅ Secrets Protected (Azure Key Vault or Vault)
 ```
 
+
+### ✅ Summary for the security networking model
+
+This Azure network model and deployment architecture follow strict cloud security and governance guidelines:
+
+* Centralized identity & Bastion via **hub VNet**
+* Isolated AKS deployments via **spoke VNETs**
+* **VNet peering** for secure and efficient connectivity
+* **NSGs** applied with granular control per subnet
+* **Private endpoints & DNS zones** ensure internal-only access to sensitive services
+* Governance enforced from **Azure AD tenant down to resource group** level
+
+
+
+## ✅ **Recommended Order for Azure L7 + L3/L4 Protection**
+
+
 # 📘 Production-Ready Azure Kubernetes (AKS) Cluster: Shared vs Dedicated Deployment Models
 
 This guide explains how to architect and manage a **production-ready AKS cluster**, covering **shared vs dedicated cluster models**, including **monitoring**, **security**, **disaster recovery**, and **namespace organization**.
-
----
-
-## 🧱 Overview
-
-A production-grade Kubernetes cluster must be:
-
-- ✅ Monitored (Logging, Tracing, Alerts)
-- ✅ Secured (RBAC, DDoS, WAF, PIM)
-- ✅ Scalable (HPA, Cluster Autoscaler)
-- ✅ Highly Available (Multi-AZ / Multi-Region)
-- ✅ Disaster Recovery-ready (Chaos Engineering + Velero)
-- ✅ Secrets Protected (Azure Key Vault or Vault)
 
 ---
 
@@ -184,7 +347,7 @@ In Azure Kubernetes Service (AKS), a dedicated cluster offers each team or proje
 Dedicated kubernetes clusters provide:
  - stronger isolation 
  - easier cost allocation 
- - Componenet resources in kubenrtes cluster can ne more expensive and less resource-efficient. 
+ - Component resources in kubenrtes cluster can ne more expensive and less resource-efficient. 
  
  Shared kubernetes clusters offer 
  - Better resource utilization 

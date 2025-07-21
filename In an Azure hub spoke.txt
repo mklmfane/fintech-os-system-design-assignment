@@ -1,4 +1,5 @@
-In an Azure hub-spoke model, Azure DDoS Protection Standard should be enabled on both the hub and spoke VNETs to protect against DDoS attacks, especially those targeting the public IP addresses associated with the Azure Firewall in the hub and any public endpoints in the spokes. Azure Front Door, which provides DDoS protection, is typically placed at the edge of the network, before the hub VNET, to protect the entire infrastructure. 
+In an Azure hub-spoke model, Azure DDoS Protection Standard should be enabled on both the hub and spoke VNETs to protect against DDoS attacks, especially those targeting the public IP addresses associated with the Azure Firewall in the hub and any public endpoints in the spokes. 
+Azure Front Door, which provides DDoS protection, is typically placed at the edge of the network, before the hub VNET, to protect the entire infrastructure. 
 
 Azure Kubernetes Service Baseline - The Hard Way
 https://techcommunity.microsoft.com/blog/appsonazureblog/azure-kubernetes-service-baseline---the-hard-way/4130496
