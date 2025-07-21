@@ -180,6 +180,18 @@ AKS Fleet Manager allows you to:
 
 ## 🔄 Use Case Comparison: Shared vs Dedicated Clusters
 
+In Azure Kubernetes Service (AKS), a dedicated cluster offers each team or project its own isolated cluster, while a shared cluster allows multiple teams or projects to share a single cluster. 
+Dedicated kubernetes clusters provide:
+ - stronger isolation 
+ - easier cost allocation 
+ - Componenet resources in kubenrtes cluster can ne more expensive and less resource-efficient. 
+ 
+ Shared kubernetes clusters offer 
+ - Better resource utilization 
+ - Potentially lower costs 
+ - Require careful management to ensure isolation 
+ - Fair resource allocation. 
+
 ### 🟩 **Dedicated AKS Clusters**
 
 > Each team, business unit, or environment gets **its own isolated AKS cluster**.
