@@ -2,7 +2,6 @@
 
 This guide explains how to architect and manage a **production-ready AKS cluster**, covering **shared vs dedicated cluster models**, including **monitoring**, **security**, **disaster recovery**, and **namespace organization**.
 
-
 ---
 
 ## 🧱 Overview
