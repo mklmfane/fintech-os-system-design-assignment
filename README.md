@@ -61,7 +61,6 @@ Based on the **README.md** file and the **consolidated architecture diagram** (`
 ### 2. **Spoke VNet: Shared AKS Cluster**
 
 * Hosts:
-
   * Shared AKS cluster with multiple namespaces
   * CI/CD components (Azure DevOps agents)
   * Azure Monitor
@@ -717,8 +716,8 @@ For **mission-critical NoSQL workloads not natively supported by Azure Backup**,
 
 * Apply azure policies
 * Apply Landing zones for differenciatign in between client access and internal employees access
-* **DDoS Protection** should always be the **first line of defense** to filter out L3/L4 attacks.
-* **WAF** should sit **after DDoS**, to inspect and block malicious **HTTP(S)** traffic.
+* DDoS Protection should always be the **first line of defense** to filter out L3/L4 attacks.
+* WAF should sit **after DDoS**, to inspect and block malicious **HTTP(S)** traffic.
 * Then comes the **Load Balancer**, followed by **Ingress** and **AKS services**.
 
 
