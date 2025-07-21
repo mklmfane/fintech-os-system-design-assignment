@@ -456,6 +456,75 @@ Namespaces play a critical role in organizing workloads, ensuring policy enforce
 
 For high-compliance and multi-zone resilience, **dedicated AKS clusters** with scoped namespaces and managed chaos testing provide the most robust solution.
 
+---
+Yes, **Azure Backup** can be used to back up and restore data from **some NoSQL databases**, but with **important caveats**. Here's a breakdown depending on the NoSQL database you're referring to:
+
+---
+
+### ✅ **Supported Scenarios (Native Integration)**
+
+#### 1. **Azure Cosmos DB (NoSQL)**
+
+Azure Backup has **native support for Azure Cosmos DB** (NoSQL API), including:
+
+* **Point-in-time restore** capabilities.
+* **Incremental backups**.
+* **Automatic backup policy** configuration.
+
+> 🟢 Use **Azure Backup Center** or **Azure Portal** to manage backups for Cosmos DB.
+
+---
+
+### ⚠️ **For Other NoSQL Databases (Non-Azure-hosted or Self-managed)**
+
+Examples: **MongoDB**, **Cassandra**, **Couchbase**, **Redis**, etc.
+
+Azure Backup **does not have native support** for these databases, but you have alternative options:
+
+#### Option 1: **Use Azure Backup for VMs or Files**
+
+* If your NoSQL DB runs on a **VM**, you can back up the entire VM.
+
+  * Pros: Simple to set up.
+  * Cons: No database-aware restore (not granular).
+
+* Or back up specific **directories** or **data folders** using file-level backup.
+
+#### Option 2: **Use Custom Backup Scripts + Azure Blob Storage**
+
+* Create scheduled tasks or cron jobs that:
+
+  * Export/backup the NoSQL database (e.g., `mongodump`, `cqlsh`, etc.).
+  * Upload the backup file to **Azure Blob Storage** or **Azure Files**.
+* Use **Azure Backup** to protect the storage account or files.
+
+#### Option 3: **Use Azure Backup Server (MABS) or Azure Recovery Services Agent**
+
+* Supports **file/folder-level backups**, not NoSQL-aware.
+* Useful for **on-prem NoSQL servers**, but still lacks app-awareness.
+
+---
+
+### ✅ Best Practice Recommendation
+
+For **mission-critical NoSQL workloads not natively supported by Azure Backup**, it's recommended to:
+
+1. Use the **database’s built-in backup tools**.
+2. Store the backups in **Azure Blob Storage**.
+3. Protect the storage account with **Azure Backup** or **Lifecycle Management** for retention.
+4. Use **Azure Site Recovery (ASR)** for disaster recovery if using VMs.
+
+---
+
+### Summary
+
+| NoSQL DB Type        | Native Azure Backup Support | Recommended Approach                           |
+| -------------------- | --------------------------- | ---------------------------------------------- |
+| Azure Cosmos DB      | ✅ Yes                       | Use Azure Backup Center                        |
+| MongoDB (on VM)      | ❌ No                        | Use VM or file-level backup + custom scripts   |
+| Cassandra (on VM)    | ❌ No                        | Use native backup tools + blob storage         |
+| Redis (Azure Cache)  | ❌ No                        | Use Redis export + backup storage manually     |
+| Self-hosted NoSQL DB | ❌ No                        | Combine native dumps with Azure Storage backup |
 
 ---
 
